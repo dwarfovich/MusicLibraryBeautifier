@@ -86,8 +86,10 @@ def move_misc_files_into_folder(source_path: Path, target_path: Path):
     for item in source_path.glob("*"):
         if target_path in item.parents or item.name == Names.artwork_folder_name():
             continue
-
-         
+        if item.is_file() and not is_audio_image_file(item):
+            shutil.move(str(item), str(target_path / item.name))
+        else:
+            shutil.move(str(item), str(target_path / item.name))
 
 def beautify_artwork(album_path: Path):
     artwork_folder_path = (album_path / Names.artwork_folder_name()).absolute()
