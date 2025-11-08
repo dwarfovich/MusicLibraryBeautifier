@@ -5,9 +5,13 @@ import os
 from pathlib import Path
 from xmlrpc.client import boolean
 
+_audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", "m4b", ".tta", ".voc", ".wma"]
+
 def is_audio_file(path: Path):
      mime, _ = mimetypes.guess_type(path)
-     return mime is not None and mime.startswith("audio/")
+     if mime and mime.startswith("audio/"):
+         return True
+     return path.suffix in _audio_extensions_not_in_mime
 
 def is_image_file(path: Path):
     mime, _ = mimetypes.guess_type(path)
@@ -21,12 +25,9 @@ def is_log_file(path: Path):
 
 def is_audio_image_file(path: Path):
     parent = path.parent
-    #print(parent)
-    #filename = os.path.basename(path)
     filename, _ = os.path.splitext(path)
-    #print(filename)
     if is_audio_file(path):
-        return (parent / (filename + ".cue")).exists()
+        return (parent / (filename + ".cue")).exists() or (parent / (filename + ".log")).exists()
     extension = path.suffix
     if extension == ".cue":
         for item in parent.glob("*"):
@@ -72,7 +73,7 @@ def move_files_into_folder(source_path: Path, target_path: Path, filter):
         if target_path in item.parents:
             continue
         if item.is_file() and filter(item):
-            shutil.move(str(item), str(target_path / item.name))
+            shutil.move(item, target_path / item.name)
 
 # /album
 #    |- some
@@ -84,12 +85,13 @@ def move_files_into_folder(source_path: Path, target_path: Path, filter):
 #    |- t.txt
 def move_misc_files_into_folder(source_path: Path, target_path: Path):
     for item in source_path.glob("*"):
-        if target_path in item.parents or item.name == Names.artwork_folder_name():
+        if target_path in item.parents or item == target_path or item.name == Names.artwork_folder_name():
             continue
-        if item.is_file() and not is_audio_image_file(item):
-            shutil.move(str(item), str(target_path / item.name))
+        if item.is_file():
+            if not is_audio_image_file(item) and not is_image_file(item):
+                shutil.move(item, target_path / item.name)
         else:
-            shutil.move(str(item), str(target_path / item.name))
+            shutil.move(item, target_path / item.name)
 
 def beautify_artwork(album_path: Path):
     artwork_folder_path = (album_path / Names.artwork_folder_name()).absolute()

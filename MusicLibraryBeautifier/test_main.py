@@ -6,10 +6,19 @@ from main import ensure_folder_uppercased
 from main import move_files_into_folder
 from main import is_image_file
 from main import is_audio_image_file
+from main import move_misc_files_into_folder
+from main import is_audio_file
 
 class FakeFileSystemTests(TestCase):
     def setUp(self):
         self.setUpPyfakefs()
+
+def test_is_audio_file(fs):
+    assert(is_audio_file(Path("track.mp3")))
+    assert(is_audio_file(Path("track.flac")))
+    assert(is_audio_file(Path("track.ape")))
+    assert(is_audio_file(Path("track.ogg")))
+    assert(is_audio_file(Path("track.wv")))
 
 def test_ensure_folder_exists_creation(fs):
     path = Path("/root")
@@ -98,3 +107,34 @@ def test_is_not_audio_image_file(fs):
     assert(not is_audio_image_file(source_path / "track2.flac"))
     assert(not is_audio_image_file(source_path / "track3.flac"))
     assert(not is_audio_image_file(source_path / "track1.txt"))
+
+def test_is_not_audio_image_file_single_file(fs):
+    source_path = Path("/root/folder")
+    fs.create_file(source_path / "track1.flac")
+    assert(not is_audio_image_file(source_path / "track1.flac"))
+
+def test_move_misc_files_into_folder(fs):
+    source_path = Path("/root/album")
+    misc_path = source_path / "Misc"
+    ensure_folder_exists(misc_path)
+    fs.create_file(source_path / "album.wv")
+    fs.create_file(source_path / "album.cue")
+    fs.create_file(source_path / "album.log")
+    fs.create_file(source_path / "album.txt")
+    fs.create_file(source_path / "album.accurip")
+    fs.create_file(source_path / ".accurip")
+    fs.create_file(source_path / "image.png")
+    fs.create_file(source_path / "file")
+    move_misc_files_into_folder(source_path, misc_path)
+    assert((source_path / "album.wv").exists())
+    assert((source_path / "album.cue").exists())
+    assert((source_path / "album.log").exists())
+    assert((source_path / "image.png").exists())
+    assert((misc_path / "album.txt").exists())
+    assert((misc_path / "album.accurip").exists())
+    assert((misc_path / ".accurip").exists())
+    assert((misc_path / "file").exists())
+    assert(not (source_path / "album.txt").exists())
+    assert(not (source_path / "album.accurip").exists())
+    assert(not (source_path / ".accurip").exists())
+    assert(not (source_path / "file").exists())
