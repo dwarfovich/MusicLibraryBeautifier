@@ -1,3 +1,4 @@
+from genericpath import isdir
 import sys
 import mimetypes
 import shutil
@@ -5,7 +6,7 @@ import os
 from pathlib import Path
 from xmlrpc.client import boolean
 
-_audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", "m4b", ".tta", ".voc", ".wma"]
+_audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", ".m4b", ".tta", ".voc", ".wma"]
 
 def is_audio_file(path: Path):
      mime, _ = mimetypes.guess_type(path)
@@ -75,20 +76,12 @@ def move_files_into_folder(source_path: Path, target_path: Path, filter):
         if item.is_file() and filter(item):
             shutil.move(item, target_path / item.name)
 
-# /album
-#    |- some
-#         |- .txt
-#    |- misc
-#    |- a.flac
-#    |- a.cue
-#    |- a.log
-#    |- t.txt
 def move_misc_files_into_folder(source_path: Path, target_path: Path):
     for item in source_path.glob("*"):
         if target_path in item.parents or item == target_path or item.name == Names.artwork_folder_name():
             continue
         if item.is_file():
-            if not is_audio_image_file(item) and not is_image_file(item):
+            if not is_audio_image_file(item) and not is_audio_file(item) and not is_image_file(item):
                 shutil.move(item, target_path / item.name)
         else:
             shutil.move(item, target_path / item.name)
@@ -105,11 +98,16 @@ def beautify_misc(album_path: Path):
     ensure_folder_uppercased(misc_folder_path)
     move_misc_files_into_folder(album_path, misc_folder_path)
 
+def remove_folders_wo_files_recursively(album_path: Path):
+    for folder in sorted(album_path.rglob("*"), reverse=True):
+        if folder.is_dir() and not any(folder.iterdir()):
+            folder.rmdir()
+
 def beautify_album_folder(path):
     print("Beautifying: " + str(path))
     beautify_artwork(path)
     beautify_misc(path)
-    # remove empty folders
+    remove_folders_wo_files_recursively(path)
 
 class Names:
     @staticmethod

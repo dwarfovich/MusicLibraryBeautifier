@@ -8,6 +8,7 @@ from main import is_image_file
 from main import is_audio_image_file
 from main import move_misc_files_into_folder
 from main import is_audio_file
+from main import remove_folders_wo_files_recursively
 
 class FakeFileSystemTests(TestCase):
     def setUp(self):
@@ -19,6 +20,12 @@ def test_is_audio_file(fs):
     assert(is_audio_file(Path("track.ape")))
     assert(is_audio_file(Path("track.ogg")))
     assert(is_audio_file(Path("track.wv")))
+    assert(is_audio_file(Path("track.ac3")))
+    assert(is_audio_file(Path("track.caf")))
+    assert(is_audio_file(Path("track.m4b")))
+    assert(is_audio_file(Path("track.tta")))
+    assert(is_audio_file(Path("track.voc")))
+    assert(is_audio_file(Path("track.wma")))
 
 def test_ensure_folder_exists_creation(fs):
     path = Path("/root")
@@ -138,3 +145,54 @@ def test_move_misc_files_into_folder(fs):
     assert(not (source_path / "album.accurip").exists())
     assert(not (source_path / ".accurip").exists())
     assert(not (source_path / "file").exists())
+
+def test_not_move_misc_files_into_folder(fs):
+    source_path = Path("/root/album")
+    misc_path = source_path / "Misc"
+    ensure_folder_exists(misc_path)
+    fs.create_file(source_path / "track1.ape")
+    fs.create_file(source_path / "track1.log")
+    fs.create_file(source_path / "track1.cue")
+    fs.create_file(source_path / "track2.ape")
+    fs.create_file(source_path / "track3.ape")
+    fs.create_file(source_path / "track4.ape")
+    move_misc_files_into_folder(source_path, misc_path)
+    assert((source_path / "track1.ape").exists())
+    assert((source_path / "track1.log").exists())
+    assert((source_path / "track1.cue").exists())
+    assert((source_path / "track2.ape").exists())
+    assert((source_path / "track3.ape").exists())
+    assert((source_path / "track4.ape").exists())
+    assert(not any(misc_path.iterdir()))
+
+def test_move_misc_files_into_folder_not_image(fs):
+    source_path = Path("/root/album")
+    misc_path = source_path / "Misc"
+    ensure_folder_exists(misc_path)
+    fs.create_file(source_path / "track1.ape")
+    fs.create_file(source_path / "a.log")
+    fs.create_file(source_path / "b.cue")
+    fs.create_file(source_path / "track2.ape")
+    fs.create_file(source_path / "track3.ape")
+    fs.create_file(source_path / "track4.ape")
+    move_misc_files_into_folder(source_path, misc_path)
+    assert((source_path / "track1.ape").exists())
+    assert((source_path / "track2.ape").exists())
+    assert((source_path / "track3.ape").exists())
+    assert((source_path / "track4.ape").exists())
+    assert(not (source_path / "a.log").exists())
+    assert(not (source_path / "b.cue").exists())
+    assert((misc_path / "a.log").exists())
+    assert((misc_path / "b.cue").exists())
+
+def test_remove_folders_wo_files_recursively(fs):
+    source_path = Path("/root/album")
+    fs.create_dir(source_path / "f1")
+    fs.create_dir(source_path / "f2/f3")
+    fs.create_file(source_path / "f4/q.txt")
+    fs.create_file(source_path / "f5/f6/q.txt")
+    remove_folders_wo_files_recursively(source_path)
+    assert(not (source_path / "f1").exists())
+    assert(not (source_path / "f2").exists())
+    assert((source_path / "f4/q.txt").exists())
+    assert((source_path / "f5/f6/q.txt").exists())
