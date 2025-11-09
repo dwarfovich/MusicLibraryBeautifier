@@ -1,11 +1,12 @@
 from pathlib import Path
 from pyfakefs.fake_filesystem_unittest import TestCase
 
-from main import ensure_folder_exists, is_audio_image_file
+from main import ensure_folder_exists
 from main import ensure_folder_uppercased
 from main import move_files_into_folder
 from main import is_image_file
 from main import is_audio_image_file
+from main import is_deepest_audio_folder
 from main import move_misc_files_into_folder
 from main import is_audio_file
 from main import remove_folders_wo_files_recursively
@@ -129,6 +130,24 @@ def test_is_not_audio_image_file_single_file(fs):
     source_path = Path("/root/folder")
     fs.create_file(source_path / "track1.flac")
     assert(not is_audio_image_file(source_path / "track1.flac"))
+
+def test_is_deepest_audio_folder_top_audio_folder(fs):
+    source_path = Path("/root/album")
+    fs.create_file(source_path / "album.wv")
+    fs.create_file(source_path / "t.txt")
+    fs.create_file(source_path / "folder" / "t.txt")
+    assert(is_deepest_audio_folder(source_path))
+
+def test_is_deepest_audio_folder_not_deepest_audio_folder(fs):
+    source_path = Path("/root/album")
+    fs.create_file(source_path / "album.wv")
+    fs.create_file(source_path / "folder" /"album.mp3")
+    assert(not is_deepest_audio_folder(source_path))
+
+def test_is_deepest_audio_folder_not_deepest_folder(fs):
+    source_path = Path("/root/album")
+    fs.create_file(source_path / "folder" / "folder2" / "album.mp3")
+    assert(not is_deepest_audio_folder(source_path))
 
 def test_move_misc_files_into_folder(fs):
     source_path = Path("/root/album")

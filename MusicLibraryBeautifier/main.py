@@ -1,3 +1,4 @@
+from genericpath import isdir
 import sys
 import mimetypes
 import shutil
@@ -48,6 +49,21 @@ def is_misc_file(path: Path, is_audio_image_album: bool):
         return not is_audio_file(path)
     else:
         return not is_audio_image_file(path)
+
+def is_deepest_audio_folder(path: Path):
+    if path.is_file():
+        return False
+    
+    has_audio_file = False
+    for item in path.rglob("*"):
+        if item.is_file():
+            if item.parent == path:
+                if not has_audio_file and is_audio_file(item):
+                    has_audio_file = True
+            elif is_audio_file(item):
+                return False
+
+    return has_audio_file
 
 def base_name(path: Path):
     return re.sub(r'(\.[^.]+)+$', '', path.name)
@@ -107,12 +123,14 @@ def move_misc_files_into_folder(source_path: Path, target_path: Path):
             shutil.move(item, target_path / item.name)
 
 def beautify_artwork(album_path: Path):
+    print("Beautifying artwork for: " + str(album_path))
     artwork_folder_path = (album_path / Names.artwork_folder_name()).absolute()
     ensure_folder_exists(artwork_folder_path)
     ensure_folder_uppercased(artwork_folder_path)
     move_files_into_folder(album_path, artwork_folder_path, is_image_file)
 
 def beautify_misc(album_path: Path):
+    print("Beautifying misc for: " + str(album_path))
     misc_folder_path = (album_path / Names.misc_folder_name()).absolute()
     ensure_folder_exists(misc_folder_path)
     ensure_folder_uppercased(misc_folder_path)
@@ -148,28 +166,11 @@ class Names:
         return "CD " + number
 
 def main():
-    print(os.getcwd())
-
-    p = Path("C:\\Folder\\.accurip")
-    #return re.sub(r'(\.[^.]+)+$', '', filename)
-    print(base_name(p))
-
-    # root = Path("TestMusic")
-
-    # shutil.rmtree(root, True)
-    # destination = Path(".") / "TestMusic" # copy into current folder as "TestMusic"
-    # shutil.copytree(Path("C:\\Users\\Boo\\Desktop\\TestMusic"), destination, dirs_exist_ok=True)
-    # for item in root.rglob("*"):
-    #     if is_album_folder(item):
-    #         beautify_album_folder(item)
-
-    #root = Path("Test").absolute()
-    #print(str(root))
-    #print(root.exists());
-    #root.rename("Test") # in case it is lowercased
-    #print(root.exists());
-    #file = Path("Test2/t.txt")
-    #shutil.move(file, "Test")
+    #path = Path(r"C:\Users\Boo\Desktop\TestMusic")
+    path = Path(r"C:\Boo\Temp\TestMusic")
+    for item in path.rglob("*"):
+        if is_deepest_audio_folder(item):
+            beautify_album_folder(item)
 
 if __name__ == "__main__":
     main()
