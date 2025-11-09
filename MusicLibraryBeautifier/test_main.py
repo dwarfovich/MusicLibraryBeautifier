@@ -32,6 +32,10 @@ def test_is_audio_file(fs):
     assert(is_audio_file(Path("track.voc")))
     assert(is_audio_file(Path("track.wma")))
 
+def test_is_not_audio_file(fs):
+    assert(not is_audio_file(Path("track.m3u")))
+    assert(not is_audio_file(Path("track.m3u8")))
+
 def test_ensure_folder_exists_creation(fs):
     path = Path("/root")
     assert not path.exists()
@@ -126,10 +130,40 @@ def test_is_not_audio_image_file(fs):
     assert(not is_audio_image_file(source_path / "track3.flac"))
     assert(not is_audio_image_file(source_path / "track1.txt"))
 
+def test_is_not_audio_image_file_with_cue_and_log(fs):
+    source_path = Path("/root/folder")
+    fs.create_file(source_path / "track1.flac")
+    fs.create_file(source_path / "track2.flac")
+    fs.create_file(source_path / "album.log")
+    fs.create_file(source_path / "album.cue")
+    assert(not is_audio_image_file(source_path / "track1.flac"))
+    assert(not is_audio_image_file(source_path / "track2.flac"))
+    assert(not is_audio_image_file(source_path / "album.log"))
+    assert(not is_audio_image_file(source_path / "album.cue"))
+
+def test_is_not_audio_image_file_with_cue_and_log_and_m3u(fs):
+    source_path = Path("C:/album")
+    fs.create_dir(source_path / "covers")
+    fs.create_file(source_path / "track1.flac")
+    fs.create_file(source_path / "track2.flac")
+    fs.create_file(source_path / "track3.flac")
+    fs.create_file(source_path / "t1.cue")
+    fs.create_file(source_path / "t1 2.cue")
+    fs.create_file(source_path / "t1.log")
+    fs.create_file(source_path / "t1.m3u")
+    assert(not is_audio_image_file(source_path / "track1.flac"))
+    assert(not is_audio_image_file(source_path / "track2.flac"))
+    assert(not is_audio_image_file(source_path / "track3.flac"))
+    assert(not is_audio_image_file(source_path / "t1.cue"))
+    assert(not is_audio_image_file(source_path / "t1 2.cue"))
+    assert(not is_audio_image_file(source_path / "t1.log"))
+    assert(not is_audio_image_file(source_path / "t1.m3u"))
+
 def test_is_not_audio_image_file_single_file(fs):
     source_path = Path("/root/folder")
     fs.create_file(source_path / "track1.flac")
     assert(not is_audio_image_file(source_path / "track1.flac"))
+
 
 def test_is_deepest_audio_folder_top_audio_folder(fs):
     source_path = Path("/root/album")
@@ -389,4 +423,25 @@ def test_beautify_album_folder_general(fs):
     assert((source_path / "Misc" / "a.cue").exists())
     assert((source_path / "Misc" / "b.log").exists())
 
+def test_beautify_album_folder_general_with_m3u8(fs):
+    source_path = Path("C:/album")
+    fs.create_dir(source_path / "covers")
+    fs.create_file(source_path / "track1.flac")
+    fs.create_file(source_path / "track2.flac")
+    fs.create_file(source_path / "track3.flac")
+    fs.create_file(source_path / "t1.cue")
+    fs.create_file(source_path / "t1 2.cue")
+    fs.create_file(source_path / "t1.log")
+    fs.create_file(source_path / "t1.m3u8")
+    beautify_album_folder(source_path)
+    assert((source_path / "track1.flac").exists())
+    assert((source_path / "track2.flac").exists())
+    assert((source_path / "track3.flac").exists())
+    assert(not (source_path / "t1.cue").exists())
+    assert(not (source_path / "t1 2.cue").exists())
+    assert(not (source_path / "t1.log").exists())
+    assert(not (source_path / "t1.m3u8").exists())
+    assert((source_path / "Misc" / "t1.cue").exists())
+    assert((source_path / "Misc" / "t1 2.cue").exists())
+    assert((source_path / "Misc" / "t1.log").exists())
 

@@ -12,7 +12,8 @@ _audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", ".m4b", ".tta", 
 
 def is_audio_file(path: Path):
      mime, _ = mimetypes.guess_type(path)
-     if mime and mime.startswith("audio/"):
+     m3u_pattern = re.compile(_m3u_regex)
+     if mime and mime.startswith("audio/") and not m3u_pattern.search(path.name):
          return True
      return path.suffix in _audio_extensions_not_in_mime
 
