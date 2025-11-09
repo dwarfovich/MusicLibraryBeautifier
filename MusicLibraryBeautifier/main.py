@@ -1,11 +1,14 @@
-from genericpath import isdir
+#from genericpath import isdir
 import sys
 import mimetypes
 import shutil
 import os
+import re
+import uuid
 from pathlib import Path
 from xmlrpc.client import boolean
 
+_m3u_regex = r"(?i)\.m3u8?$"
 _audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", ".m4b", ".tta", ".voc", ".wma"]
 
 def is_audio_file(path: Path):
@@ -48,42 +51,61 @@ def is_misc_file(path: Path, is_audio_image_album: bool):
     else:
         return not is_audio_image_file(path)
 
-
-# def is_album_folder(path: Path):
-#     for item in path.glob("*"):
-#         if item.is_dir():
-#             continue
-#         if is_audio_file(item):
-#             return True
-        
-#     return False
+def base_name(path: Path):
+    return re.sub(r'(\.[^.]+)+$', '', path.name)
 
 def ensure_folder_exists(path: Path):
     if not path.exists():
         path.mkdir(parents = True, exist_ok = True)
 
 def ensure_folder_uppercased(path: Path):
+    if not path.exists():
+        raise RuntimeError("The path doesn't exist")
     parent_dir = os.path.dirname(path)
     current_folder_name = os.path.basename(path)
-    new_folder_name = current_folder_name.title()
-    if current_folder_name is not new_folder_name:
-         os.rename(path, Path(parent_dir) / new_folder_name)
+    temp_path = Path(parent_dir) / (current_folder_name + "as140izeowq34")
+    os.rename(path, temp_path)
+    new_folder_name = current_folder_name.capitalize()
+    os.rename(temp_path, Path(parent_dir) / new_folder_name)
+
+def move_and_rename_if_exists(source_path: Path, target_folder_path: Path):
+    name = source_path.name
+    new_path = Path()
+    if (target_folder_path / name).exists():
+        index = 1
+        maximum_index = 100
+        base_filename = base_name(source_path)
+        while True:
+            new_name = base_filename + " (" + str(index) + ")" + source_path.suffix
+            new_path = target_folder_path / new_name
+            if not new_path.exists():
+                break
+            else:
+                ++index
+                if index > maximum_index:
+                    new_path = target_folder_path / uuid.uuid4()
+                    break;
+    else:
+        new_path = target_folder_path / name
+
+    target_folder_path.mkdir(parents = True, exist_ok = True)
+    shutil.move(source_path, new_path)
 
 def move_files_into_folder(source_path: Path, target_path: Path, filter):
     for item in source_path.rglob("*"):
         if target_path in item.parents:
             continue
         if item.is_file() and filter(item):
-            shutil.move(item, target_path / item.name)
+            move_and_rename_if_exists(item, target_path)
 
 def move_misc_files_into_folder(source_path: Path, target_path: Path):
     for item in source_path.glob("*"):
-        if target_path in item.parents or item == target_path or item.name == Names.artwork_folder_name():
+        if (target_path in item.parents) or (item == target_path):
             continue
         if item.is_file():
             if not is_audio_image_file(item) and not is_audio_file(item) and not is_image_file(item):
-                shutil.move(item, target_path / item.name)
-        else:
+                move_and_rename_if_exists(item, target_path)
+        elif (item.name != Names.artwork_folder_name()):
             shutil.move(item, target_path / item.name)
 
 def beautify_artwork(album_path: Path):
@@ -99,14 +121,21 @@ def beautify_misc(album_path: Path):
     move_misc_files_into_folder(album_path, misc_folder_path)
 
 def remove_folders_wo_files_recursively(album_path: Path):
-    for folder in sorted(album_path.rglob("*"), reverse=True):
+    for folder in sorted(album_path.rglob("*"), reverse = True):
         if folder.is_dir() and not any(folder.iterdir()):
             folder.rmdir()
+
+def remove_files(album_path: Path, regex: str):
+    pattern = re.compile(regex)
+    for file in album_path.rglob("*"):
+        if file.is_file() and pattern.search(file.name):
+            file.unlink()
 
 def beautify_album_folder(path):
     print("Beautifying: " + str(path))
     beautify_artwork(path)
     beautify_misc(path)
+    remove_files(path, _m3u_regex)
     remove_folders_wo_files_recursively(path)
 
 class Names:
@@ -122,7 +151,11 @@ class Names:
 
 def main():
     print(os.getcwd())
-    print("Hello")
+
+    p = Path("C:\\Folder\\.accurip")
+    #return re.sub(r'(\.[^.]+)+$', '', filename)
+    print(base_name(p))
+
     # root = Path("TestMusic")
 
     # shutil.rmtree(root, True)

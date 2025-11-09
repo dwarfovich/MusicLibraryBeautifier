@@ -9,6 +9,10 @@ from main import is_audio_image_file
 from main import move_misc_files_into_folder
 from main import is_audio_file
 from main import remove_folders_wo_files_recursively
+from main import remove_files
+from main import _m3u_regex
+from main import beautify_album_folder
+from main import move_and_rename_if_exists
 
 class FakeFileSystemTests(TestCase):
     def setUp(self):
@@ -52,6 +56,12 @@ def test_ensure_folder_uppercased(fs):
     fs.create_dir(path)
     ensure_folder_uppercased(path)
     assert(cased_folder in [entry.name for entry in Path("/root").iterdir()])
+
+    cased_folder = "Folder3"
+    path = Path("C:/Root") / "folder3"
+    fs.create_dir(path)
+    ensure_folder_uppercased(path)
+    assert(cased_folder in [entry.name for entry in Path("C:/root").iterdir()])
 
 def test_move_files_into_folder(fs):
     source_path = Path("/root/folder")
@@ -196,3 +206,140 @@ def test_remove_folders_wo_files_recursively(fs):
     assert(not (source_path / "f2").exists())
     assert((source_path / "f4/q.txt").exists())
     assert((source_path / "f5/f6/q.txt").exists())
+
+def test_remove_files(fs):
+    source_path = Path("/root/album")
+    fs.create_file(source_path / "f1")
+    fs.create_file(source_path / "f2.")
+    fs.create_file(source_path / "f3.m3u")
+    fs.create_file(source_path / ".m3u")
+    fs.create_file(source_path / ".m3u8")
+    fs.create_file(source_path / "f4.m3u8")
+    fs.create_file(source_path / "m3u" / "f5.m3u8")
+    fs.create_file(source_path / "f6.m3")
+    fs.create_file(source_path / "f7.m3uq")
+    remove_files(source_path, _m3u_regex)
+    assert((source_path / "f1").exists())
+    assert((source_path / "f2.").exists())
+    assert((source_path / "f6.m3").exists())
+    assert((source_path / "m3u").exists())
+    assert((source_path / "f7.m3uq").exists())
+    assert(not (source_path / "f3.m3u").exists())
+    assert(not (source_path / ".m3u").exists())
+    assert(not (source_path / ".m3u8").exists())
+    assert(not (source_path / "f4.m3u8").exists())
+    assert(not (source_path / "m3u" / "f5.m3u8").exists())
+
+def test_move_and_rename_if_exists_file_not_exists(fs):
+    source_path = Path(r"C:\t.txt")
+    fs.create_file(source_path)
+    target_folder_path = Path(r"C:\folder")
+    move_and_rename_if_exists(source_path, target_folder_path)
+    assert((target_folder_path / "t.txt").exists())
+    assert(not source_path.exists())
+
+def test_move_and_rename_if_exists_file_exists(fs):
+    source_path = Path(r"C:\t.txt")
+    fs.create_file(source_path)
+    target_folder_path = Path(r"C:\folder")
+    fs.create_file(target_folder_path / source_path.name)
+    move_and_rename_if_exists(source_path, target_folder_path)
+    assert((target_folder_path / "t.txt").exists())
+    assert((target_folder_path / "t (1).txt").exists())
+    assert(not source_path.exists())
+
+def test_move_and_rename_if_exists_folder_not_exists(fs):
+    source_path = Path(r"C:\target")
+    fs.create_dir(source_path)
+    fs.create_file(source_path / "t.txt")
+    target_folder_path = Path(r"C:\folder")
+    move_and_rename_if_exists(source_path, target_folder_path)
+    assert((target_folder_path / "target" / "t.txt").exists())
+    assert(not source_path.exists())
+
+def test_move_and_rename_if_exists_folder_exists(fs):
+    source_path = Path(r"C:\target")
+    fs.create_dir(source_path)
+    fs.create_file(source_path / "t.txt")
+    target_folder_path = Path(r"C:\folder")
+    fs.create_dir(target_folder_path / source_path.name)
+    move_and_rename_if_exists(source_path, target_folder_path)
+    assert((target_folder_path / "target (1)" / "t.txt").exists())
+    assert(not source_path.exists())
+
+def test_beautify_album_folder_already_beautified_single_audiofile(fs):
+    source_path = Path("C:/root/album")
+    fs.create_file(source_path / "t1.mp3")
+    fs.create_file(source_path / "Artwork" / "image.jpeg")
+    fs.create_file(source_path / "Artwork" / "front.jpeg")
+    fs.create_file(source_path / "Misc" / "t1.cue")
+    fs.create_file(source_path / "Misc" / "t2.log")
+    fs.create_file(source_path / "Misc" / "t.txt")
+    beautify_album_folder(source_path)
+    assert((source_path / "t1.mp3").exists())
+    assert((source_path / "Artwork" / "image.jpeg").exists())
+    assert((source_path / "Artwork" / "front.jpeg").exists())
+    assert((source_path / "Misc" / "t1.cue").exists())
+    assert((source_path / "Misc" / "t2.log").exists())
+    assert((source_path / "Misc" / "t.txt").exists())
+
+def test_beautify_album_folder_already_beautified_multiple_audiofiles(fs):
+    source_path = Path("C:/album")
+    fs.create_file(source_path / "t1.wv")
+    fs.create_file(source_path / "t2.wv")
+    fs.create_file(source_path / "t3.wv")
+    fs.create_file(source_path / "Artwork" / "image.png")
+    fs.create_file(source_path / "Misc" / "t1.cue")
+    fs.create_file(source_path / "Misc" / "t2.log")
+    fs.create_file(source_path / "Misc" / "t.txt")
+    beautify_album_folder(source_path)
+    assert((source_path / "t1.wv").exists())
+    assert((source_path / "t2.wv").exists())
+    assert((source_path / "t3.wv").exists())
+    assert((source_path / "Artwork" / "image.png").exists())
+    assert((source_path / "Misc" / "t1.cue").exists())
+    assert((source_path / "Misc" / "t2.log").exists())
+    assert((source_path / "Misc" / "t.txt").exists())
+
+def test_beautify_album_folder_audio_image(fs):
+    source_path = Path("C:/album")
+    fs.create_file(source_path / "t1.wv")
+    fs.create_file(source_path / "t1.cue")
+    fs.create_file(source_path / "t1.log")
+    fs.create_file(source_path / "image.png")
+    fs.create_file(source_path / "folder.jpg")
+    fs.create_file(source_path / "t.txt")
+    fs.create_file(source_path / "a.cue")
+    fs.create_file(source_path / "b.log")
+    beautify_album_folder(source_path)
+    assert((source_path / "t1.wv").exists())
+    assert((source_path / "t1.cue").exists())
+    assert((source_path / "t1.log").exists())
+    assert((source_path / "Artwork" / "image.png").exists())
+    assert((source_path / "Artwork" / "folder.jpg").exists())
+    assert((source_path / "Misc" / "t.txt").exists())
+    assert((source_path / "Misc" / "a.cue").exists())
+    assert((source_path / "Misc" / "b.log").exists())
+
+def test_beautify_album_folder_with_existing_folders(fs):
+    source_path = Path("C:/album")
+    fs.create_dir(source_path / "artwork")
+    fs.create_dir(source_path / "misc")
+    fs.create_file(source_path / "t1.wv")
+    fs.create_file(source_path / "t1.cue")
+    fs.create_file(source_path / "t1.log")
+    fs.create_file(source_path / "image.png")
+    fs.create_file(source_path / "folder.jpg")
+    fs.create_file(source_path / "t.txt")
+    fs.create_file(source_path / "a.cue")
+    fs.create_file(source_path / "b.log")
+    beautify_album_folder(source_path)
+    assert((source_path / "t1.wv").exists())
+    assert((source_path / "t1.cue").exists())
+    assert((source_path / "t1.log").exists())
+    assert((source_path / "Artwork" / "image.png").exists())
+    assert((source_path / "Artwork" / "folder.jpg").exists())
+    assert((source_path / "Misc" / "t.txt").exists())
+    assert((source_path / "Misc" / "a.cue").exists())
+    assert((source_path / "Misc" / "b.log").exists())
+
