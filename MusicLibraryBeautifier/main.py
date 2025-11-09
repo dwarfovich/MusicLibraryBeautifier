@@ -1,4 +1,3 @@
-#from genericpath import isdir
 import sys
 import mimetypes
 import shutil
@@ -6,7 +5,6 @@ import os
 import re
 import uuid
 from pathlib import Path
-from xmlrpc.client import boolean
 
 _m3u_regex = r"(?i)\.m3u8?$"
 _audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", ".m4b", ".tta", ".voc", ".wma"]
