@@ -1,4 +1,3 @@
-from genericpath import isdir
 import sys
 import mimetypes
 import shutil
@@ -9,6 +8,10 @@ from pathlib import Path
 
 _m3u_regex = r"(?i)\.m3u8?$"
 _audio_extensions_not_in_mime = [".ape", ".wv", ".ac3", ".caf", ".m4b", ".tta", ".voc", ".wma"]
+_cue_extension = ".cue"
+_log_extension = ".log"
+_temp_folder_suffix = "as140izeowq34"
+_maximum_item_suffix = 100
 
 def is_audio_file(path: Path):
      mime, _ = mimetypes.guess_type(path)
@@ -22,7 +25,7 @@ def is_image_file(path: Path):
     return mime is not None and mime.startswith("image/")
 
 def is_cue_file(path: Path):
-    return (path.suffix == ".cue") or (path.suffix == ".cue-original")
+    return (path.suffix == ".cue")
 
 def is_log_file(path: Path):
     return (path.suffix == ".log")
@@ -31,14 +34,14 @@ def is_audio_image_file(path: Path):
     parent = path.parent
     filename, _ = os.path.splitext(path)
     if is_audio_file(path):
-        return (parent / (filename + ".cue")).exists() or (parent / (filename + ".log")).exists()
+        return (parent / (filename + _cue_extension)).exists() or (parent / (filename + _log_extension)).exists()
     extension = path.suffix
-    if extension == ".cue":
+    if extension == _cue_extension:
         for item in parent.glob("*"):
             item_filename, _ = os.path.splitext(item)
             if item_filename == filename and is_audio_file(item):
                 return True
-    if extension == ".log":
+    if extension == _log_extension:
         for item in parent.glob("*"):
             item_filename, _ = os.path.splitext(item)
             if item_filename == filename and is_audio_file(item):
@@ -78,7 +81,7 @@ def ensure_folder_uppercased(path: Path):
         raise RuntimeError("The path doesn't exist")
     parent_dir = os.path.dirname(path)
     current_folder_name = os.path.basename(path)
-    temp_path = Path(parent_dir) / (current_folder_name + "as140izeowq34")
+    temp_path = Path(parent_dir) / (current_folder_name + _temp_folder_suffix)
     os.rename(path, temp_path)
     new_folder_name = current_folder_name.capitalize()
     os.rename(temp_path, Path(parent_dir) / new_folder_name)
@@ -88,7 +91,6 @@ def move_and_rename_if_exists(source_path: Path, target_folder_path: Path):
     new_path = Path()
     if (target_folder_path / name).exists():
         index = 1
-        maximum_index = 100
         base_filename = base_name(source_path)
         while True:
             new_name = base_filename + " (" + str(index) + ")" + source_path.suffix
@@ -97,7 +99,7 @@ def move_and_rename_if_exists(source_path: Path, target_folder_path: Path):
                 break
             else:
                 ++index
-                if index > maximum_index:
+                if index > _maximum_item_suffix:
                     new_path = target_folder_path / uuid.uuid4()
                     break;
     else:
@@ -124,14 +126,12 @@ def move_misc_files_into_folder(source_path: Path, target_path: Path):
             shutil.move(item, target_path / item.name)
 
 def beautify_artwork(album_path: Path):
-    print("Beautifying artwork for: " + str(album_path))
     artwork_folder_path = (album_path / Names.artwork_folder_name()).absolute()
     ensure_folder_exists(artwork_folder_path)
     ensure_folder_uppercased(artwork_folder_path)
     move_files_into_folder(album_path, artwork_folder_path, is_image_file)
 
 def beautify_misc(album_path: Path):
-    print("Beautifying misc for: " + str(album_path))
     misc_folder_path = (album_path / Names.misc_folder_name()).absolute()
     ensure_folder_exists(misc_folder_path)
     ensure_folder_uppercased(misc_folder_path)
@@ -167,8 +167,9 @@ class Names:
         return "CD " + number
 
 def main():
+    path = Path(r"D:\Music")
     #path = Path(r"C:\Users\Boo\Desktop\TestMusic")
-    path = Path(r"C:\Boo\Temp\TestMusic")
+    #path = Path(r"C:\Boo\Temp\TestMusic")
     for item in path.rglob("*"):
         if is_deepest_audio_folder(item):
             beautify_album_folder(item)
